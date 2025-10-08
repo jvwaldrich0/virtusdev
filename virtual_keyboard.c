@@ -10,6 +10,7 @@
 static int fd = -1;
 
 void cleanup(int signo) {
+    (void)signo;  // Suppress unused parameter warning
     if (fd >= 0) {
         ioctl(fd, UI_DEV_DESTROY);
         close(fd);

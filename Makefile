@@ -10,6 +10,17 @@ virtual_keyboard: virtual_keyboard.c device_config.h
 keyboard_writer: keyboard_writer.c device_config.h
 	$(CC) $(CFLAGS) -o keyboard_writer keyboard_writer.c
 
+check: $(TARGETS)
+	@echo "Running basic checks..."
+	@echo "[1/3] Checking virtual_keyboard binary..."
+	@test -f virtual_keyboard || (echo "ERROR: virtual_keyboard not built" && exit 1)
+	@echo "[2/3] Checking keyboard_writer binary..."
+	@test -f keyboard_writer || (echo "ERROR: keyboard_writer not built" && exit 1)
+	@echo "[3/3] Checking file permissions..."
+	@test -x virtual_keyboard || (echo "ERROR: virtual_keyboard not executable" && exit 1)
+	@test -x keyboard_writer || (echo "ERROR: keyboard_writer not executable" && exit 1)
+	@echo "✅ All checks passed!"
+
 clean:
 	rm -f $(TARGETS)
 
@@ -31,4 +42,4 @@ help:
 	@echo "  TESTING.md         - Testing procedures"
 	@echo ""
 
-.PHONY: all clean install help
+.PHONY: all check clean install help
