@@ -1,1 +1,6 @@
 dist/
+virtual_keyboard
+keyboard_writer
+virtusdev
+*.o
+devices/*.o

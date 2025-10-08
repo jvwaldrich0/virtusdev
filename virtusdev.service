@@ -1,0 +1,12 @@
+[Unit]
+Description=VirtUSDev Virtual Device Emulator
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/virtual_keyboard
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

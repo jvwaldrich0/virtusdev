@@ -1,14 +1,21 @@
-# Virtual Barcode Reader Device (115200 baud)
+# VirtUSDev - Virtual USB Device Emulator
 
-A virtual barcode scanner that emulates a USB barcode reader connected as a HID keyboard device on Linux.
+A flexible virtual device emulator that can emulate multiple USB device types on Linux including barcode scanners, keyboards, mice, and serial ports.
 
 ## Overview
 
-This emulates a **barcode scanner** that:
-- Connects as `/dev/input/eventX` (like real USB barcode scanners)
-- Operates at **115200 baud**
-- Sends scanned data as keyboard input followed by Enter
-- Works with any application that accepts keyboard input
+VirtUSDev allows you to create virtual USB devices that:
+- Connect as `/dev/input/eventX` (like real USB devices)
+- Support multiple device types (barcode scanner, keyboard, mouse, RS232)
+- Work with any application that accepts input from these devices
+- Can be configured via command-line, config file, or interactive menu
+
+## Supported Devices
+
+1. **Barcode Scanner** (115200 baud) - Emulates USB HID barcode reader
+2. **USB Keyboard** - Full featured virtual USB HID keyboard
+3. **Mouse Jiggler** - Prevents screen lock by moving mouse periodically
+4. **RS232 Serial Port** - Virtual serial port communication interface
 
 ## Created by
 - **User**: jvwaldrich0
@@ -21,19 +28,52 @@ This emulates a **barcode scanner** that:
 make
 ```
 
-### 2. Start the Virtual Device
+### 2. Start a Virtual Device
+
+**Command-line selection:**
+```bash
+sudo ./virtual_keyboard barcode        # Start barcode scanner
+sudo ./virtual_keyboard usb_keyboard   # Start USB keyboard
+sudo ./virtual_keyboard mouse_jiggle   # Start mouse jiggler
+sudo ./virtual_keyboard rs232          # Start RS232 port
+```
+
+**Interactive menu:**
 ```bash
 sudo ./virtual_keyboard
 ```
-
-Output:
+You'll see a menu to select your device:
 ```
 ╔═══════════════════════════════════════════════════════╗
-║      VIRTUAL BARCODE READER DEVICE CREATED           ║
+║           VirtUSDev - Device Selection Menu           ║
 ╚═══════════════════════════════════════════════════════╝
-  Device Name  : Virtual Keyboard 115200
-  Device Type  : Barcode Scanner (HID Keyboard)
-  Baudrate     : 115200 bps
+
+Select a device to emulate:
+
+  [1] barcode        
+      Barcode Scanner (115200 baud) - Emulates USB HID barcode reader
+
+  [2] usb_keyboard   
+      USB Keyboard - Full featured virtual USB HID keyboard
+
+  [3] mouse_jiggle   
+      Mouse Jiggler - Prevents screen lock by moving mouse periodically
+
+  [4] rs232          
+      RS232 Serial Port - Virtual serial port communication interface
+
+Enter choice [1-4]:
+```
+
+**Configuration file:**
+Create `/etc/virtusdev/config`:
+```bash
+# VirtUSDev Configuration
+DEVICE=barcode
+```
+Then run:
+```bash
+sudo ./virtual_keyboard  # Uses device from config
 ```
 
 ### 3. Find Your Device
@@ -43,26 +83,56 @@ cat /proc/bus/input/devices | grep -A 5 "Virtual Keyboard 115200"
 
 Look for the `event` number (e.g., `event25`)
 
-### 4. Scan Barcodes
+### 4. Use the Device (Barcode Scanner Example)
 
 **Interactive mode:**
 ```bash
-sudo ./keyboard_writer /dev/input/event25
+sudo ./virtusdev /dev/input/event25
 SCAN> 1234567890
 SCAN> ABC-123-XYZ
 ```
 
 **Pipe mode:**
 ```bash
-echo "1234567890" | sudo ./keyboard_writer /dev/input/event25
+echo "1234567890" | sudo ./virtusdev /dev/input/event25
 ```
 
 **Single scan:**
 ```bash
-sudo ./keyboard_writer /dev/input/event25 "BARCODE123"
+sudo ./virtusdev /dev/input/event25 "BARCODE123"
 ```
 
-## Usage Examples
+## Installation
+
+### System-wide Installation
+```bash
+sudo make install
+```
+
+This will:
+- Install binaries to `/usr/local/bin/`
+- Create config directory at `/etc/virtusdev/`
+- Install systemd service file
+
+### Enable Auto-start Service
+```bash
+# Edit config to set your preferred device
+sudo nano /etc/virtusdev/config
+
+# Enable and start service
+sudo systemctl enable virtusdev
+sudo systemctl start virtusdev
+
+# Check status
+sudo systemctl status virtusdev
+```
+
+### Uninstall
+```bash
+sudo make uninstall
+```
+
+## Usage Examples (Barcode Scanner)
 
 ### Scan into a text file
 ```bash
@@ -70,19 +140,19 @@ sudo ./keyboard_writer /dev/input/event25 "BARCODE123"
 cat > scanned_items.txt
 
 # Terminal 2
-echo "ITEM001" | sudo ./keyboard_writer /dev/input/event25
-echo "ITEM002" | sudo ./keyboard_writer /dev/input/event25
+echo "ITEM001" | sudo ./virtusdev /dev/input/event25
+echo "ITEM002" | sudo ./virtusdev /dev/input/event25
 ```
 
 ### Scan into a web form
 1. Open browser and focus on input field
-2. Run: `sudo ./keyboard_writer /dev/input/event25`
+2. Run: `sudo ./virtusdev /dev/input/event25`
 3. Type barcode and press Enter
 4. Watch it appear in the browser!
 
 ### Automated scanning from file
 ```bash
-cat barcodes.txt | sudo ./keyboard_writer /dev/input/event25
+cat barcodes.txt | sudo ./virtusdev /dev/input/event25
 ```
 
 ### Monitor barcode scans
@@ -91,8 +161,48 @@ cat barcodes.txt | sudo ./keyboard_writer /dev/input/event25
 sudo evtest /dev/input/event25
 
 # Terminal 2 - Scan
-sudo ./keyboard_writer /dev/input/event25
+sudo ./virtusdev /dev/input/event25
 ```
+
+## Configuration
+
+### Config File Format
+Location: `/etc/virtusdev/config`
+
+```bash
+# VirtUSDev Configuration
+# Select device: barcode, usb_keyboard, mouse_jiggle, rs232
+DEVICE=barcode
+```
+
+### Priority Order
+1. Command-line argument (highest priority)
+2. Config file setting
+3. Interactive menu (if nothing specified)
+
+## Device Details
+
+### Barcode Scanner
+- **Baudrate**: 115200 bps
+- **Character timing**: ~87 μs per character
+- **Supports**: All alphanumeric and common special characters
+- **Appends**: Enter key after each scan
+- **Compatible with**: UPC/EAN, Code 39, Code 128, QR codes
+
+### USB Keyboard
+- Full HID keyboard support
+- All standard keys supported
+- LED indicators support
+
+### Mouse Jiggler
+- Prevents screen lock and sleep
+- Minimal mouse movement
+- Auto-jiggle mode
+
+### RS232 Serial Port
+- Virtual serial communication
+- 115200 baud default
+- Standard serial port emulation
 
 ## Real Barcode Scanner Behavior
 
@@ -111,6 +221,34 @@ The device sends plain text, supporting common barcode formats:
 - **Code 128**: `ABC-123-xyz`
 - **QR Code Data**: `http://example.com`
 - **Custom formats**: Any alphanumeric string
+
+## Command-Line Reference
+
+### virtual_keyboard
+```bash
+Usage: virtual_keyboard [DEVICE_TYPE]
+
+Available devices:
+  barcode         - Barcode Scanner (115200 baud)
+  usb_keyboard    - USB Keyboard  
+  mouse_jiggle    - Mouse Jiggler
+  rs232           - RS232 Serial Port
+
+Examples:
+  ./virtual_keyboard barcode        # Start barcode scanner
+  ./virtual_keyboard usb_keyboard   # Start USB keyboard
+  ./virtual_keyboard                # Interactive menu
+```
+
+### virtusdev (formerly keyboard_writer)
+```bash
+Usage: virtusdev [/dev/input/eventX] [barcode_data]
+
+Modes:
+  Interactive: virtusdev /dev/input/eventX
+  Pipe:       echo 'data' | virtusdev /dev/input/eventX
+  Single:     virtusdev /dev/input/eventX 'data'
+```
 
 ## Device Information
 
@@ -139,7 +277,7 @@ sudo modprobe uinput
 ### Permission denied
 ```bash
 # Run with sudo
-sudo ./keyboard_writer /dev/input/event25
+sudo ./virtusdev /dev/input/event25
 
 # Or add yourself to input group
 sudo usermod -a -G input $USER
@@ -151,10 +289,23 @@ sudo usermod -a -G input $USER
 cat /proc/bus/input/devices | grep -A 5 "Virtual Keyboard 115200" | grep event
 ```
 
+### Service not starting
+```bash
+# Check service status
+sudo systemctl status virtusdev
+
+# View logs
+sudo journalctl -u virtusdev -f
+
+# Verify config
+cat /etc/virtusdev/config
+```
+
 ## Technical Specifications
 
-- **Baudrate**: 115200 bps
+- **Baudrate**: 115200 bps (for barcode/RS232)
 - **Interface**: USB HID (emulated via uinput)
 - **Character timing**: ~87 μs per character
 - **Scan speed**: ~11,500 characters/second theoretical max
 - **Protocol**: Keyboard wedge (HID keyboard)
+- **Color output**: ANSI terminal colors for better readability
