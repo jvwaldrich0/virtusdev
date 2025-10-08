@@ -5,7 +5,13 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 cd "${REPO_ROOT}"
 
-mkdir -p dist
+echo "Building VirtUSDev..."
+make clean
+make all
+make keyboard_writer
 
-gcc -o dist/virtual_keyboard virtual_keyboard.c
-gcc -o dist/keyboard_writer keyboard_writer.c
+echo ""
+echo "Build complete!"
+echo "  virtual_keyboard - Device emulator"
+echo "  virtusdev        - Barcode writer tool"
+echo "  keyboard_writer  - Symlink to virtusdev (backward compatibility)"

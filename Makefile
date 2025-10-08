@@ -42,6 +42,7 @@ install: all
 	install -d $(PREFIX)/bin
 	install -m 755 virtual_keyboard $(PREFIX)/bin/
 	install -m 755 virtusdev $(PREFIX)/bin/
+	ln -sf virtusdev $(PREFIX)/bin/keyboard_writer
 	@echo "Creating config directory..."
 	install -d $(SYSCONFDIR)/virtusdev
 	@if [ ! -f $(SYSCONFDIR)/virtusdev/config ]; then \
@@ -57,12 +58,13 @@ install: all
 	fi
 	@echo ""
 	@echo "Installation complete!"
-	@echo "  Binaries: $(PREFIX)/bin/{virtual_keyboard,virtusdev}"
+	@echo "  Binaries: $(PREFIX)/bin/{virtual_keyboard,virtusdev,keyboard_writer}"
 	@echo "  Config: $(SYSCONFDIR)/virtusdev/config"
 
 uninstall:
 	rm -f $(PREFIX)/bin/virtual_keyboard
 	rm -f $(PREFIX)/bin/virtusdev
+	rm -f $(PREFIX)/bin/keyboard_writer
 	rm -f /etc/systemd/system/virtusdev.service
 	@echo "Uninstalled. Config files preserved in $(SYSCONFDIR)/virtusdev/"
 
