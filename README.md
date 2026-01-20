@@ -4,10 +4,10 @@ A virtual barcode scanner with modern GUI that emulates a USB barcode reader as 
 
 ## Features
 
-- 🎨 **Dark themed GUI** with simulated glassmorphism effects
+- 🎨 **Native GNOME interface** using GTK4
 - ⚡ **115200 baud** barcode scanner emulation
 - 📊 **Real-time scan history** with duration tracking
-- 🖥️ **Native GUI** built with iced framework
+- 🖥️ **Native GUI** with system theme support
 - 🔒 **Safe Rust** implementation with proper error handling
 
 ## Quick Start
@@ -85,15 +85,14 @@ sudo udevadm trigger
 
 ```
 src/
-├── main.rs       # GUI application (iced)
-├── device.rs     # VirtualKeyboard, keymap, event emission
-└── theme.rs      # Dark theme with glassmorphism
+├── main.rs       # GUI application (GTK4)
+└── device.rs     # VirtualKeyboard, keymap, event emission
 ```
 
 **Key Components:**
 - `VirtualKeyboard`: Wraps `evdev::uinput::VirtualDevice`
 - `Arc<Mutex<>>`: Thread-safe device access for async scans
-- `Task::perform()`: Non-blocking scan execution
+- `glib::spawn_future`: Non-blocking scan execution with GTK4
 
 ## Supported Characters
 
@@ -144,7 +143,7 @@ sudo modprobe uinput
 ### Build errors
 Ensure all system dependencies are installed:
 ```bash
-sudo apt-get install -y pkg-config libfontconfig-dev build-essential
+sudo apt-get install -y pkg-config build-essential libgtk-4-dev
 ```
 
 ## Created By
@@ -159,5 +158,5 @@ sudo apt-get install -y pkg-config libfontconfig-dev build-essential
 - **Interface**: USB HID (emulated via uinput)
 - **Character timing**: ~87 μs per character
 - **Protocol**: Keyboard wedge (HID keyboard)
-- **GUI Framework**: iced 0.13
+- **GUI Framework**: GTK4 (gtk4-rs 0.9)
 - **Language**: Rust (edition 2021)
