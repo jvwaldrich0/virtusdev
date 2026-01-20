@@ -1,1 +1,10 @@
+# Legacy C builds
 dist/
+
+# Rust builds
+target/
+Cargo.lock
+
+# IDE
+.vscode/
+.idea/

@@ -1,160 +1,163 @@
-# Virtual Barcode Reader Device (115200 baud)
+# VirtusDev - Virtual Barcode Scanner (Rust Edition)
 
-A virtual barcode scanner that emulates a USB barcode reader connected as a HID keyboard device on Linux.
+A virtual barcode scanner with modern GUI that emulates a USB barcode reader as a HID keyboard device on Linux.
 
-## Overview
+## Features
 
-This emulates a **barcode scanner** that:
-- Connects as `/dev/input/eventX` (like real USB barcode scanners)
-- Operates at **115200 baud**
-- Sends scanned data as keyboard input followed by Enter
-- Works with any application that accepts keyboard input
-
-## Created by
-- **User**: jvwaldrich0
-- **Date**: 2025-10-08 12:59:34 UTC
+- 🎨 **Dark themed GUI** with simulated glassmorphism effects
+- ⚡ **115200 baud** barcode scanner emulation
+- 📊 **Real-time scan history** with duration tracking
+- 🖥️ **Native GUI** built with iced framework
+- 🔒 **Safe Rust** implementation with proper error handling
 
 ## Quick Start
 
-### 1. Build
+**All dependencies (Rust, system libraries) are already installed!**
+
+### Just run:
+
 ```bash
-make
+./run.sh
 ```
 
-### 2. Start the Virtual Device
+This will:
+1. Build the project (if not already built)
+2. Launch the GUI with sudo (required for `/dev/uinput` access)
+
+### Manual build:
+
 ```bash
-sudo ./virtual_keyboard
+./build.sh
+sudo ./target/release/virtusdev
 ```
 
-Output:
-```
-╔═══════════════════════════════════════════════════════╗
-║      VIRTUAL BARCODE READER DEVICE CREATED           ║
-╚═══════════════════════════════════════════════════════╝
-  Device Name  : Virtual Keyboard 115200
-  Device Type  : Barcode Scanner (HID Keyboard)
-  Baudrate     : 115200 bps
-```
+### 3. Use the GUI
 
-### 3. Find Your Device
-```bash
-cat /proc/bus/input/devices | grep -A 5 "Virtual Keyboard 115200"
-```
-
-Look for the `event` number (e.g., `event25`)
-
-### 4. Scan Barcodes
-
-**Interactive mode:**
-```bash
-sudo ./keyboard_writer /dev/input/event25
-SCAN> 1234567890
-SCAN> ABC-123-XYZ
-```
-
-**Pipe mode:**
-```bash
-echo "1234567890" | sudo ./keyboard_writer /dev/input/event25
-```
-
-**Single scan:**
-```bash
-sudo ./keyboard_writer /dev/input/event25 "BARCODE123"
-```
-
-## Usage Examples
-
-### Scan into a text file
-```bash
-# Terminal 1
-cat > scanned_items.txt
-
-# Terminal 2
-echo "ITEM001" | sudo ./keyboard_writer /dev/input/event25
-echo "ITEM002" | sudo ./keyboard_writer /dev/input/event25
-```
-
-### Scan into a web form
-1. Open browser and focus on input field
-2. Run: `sudo ./keyboard_writer /dev/input/event25`
-3. Type barcode and press Enter
-4. Watch it appear in the browser!
-
-### Automated scanning from file
-```bash
-cat barcodes.txt | sudo ./keyboard_writer /dev/input/event25
-```
-
-### Monitor barcode scans
-```bash
-# Terminal 1 - Monitor
-sudo evtest /dev/input/event25
-
-# Terminal 2 - Scan
-sudo ./keyboard_writer /dev/input/event25
-```
-
-## Real Barcode Scanner Behavior
-
-Like a real barcode scanner, this device:
-1. ✅ Sends data as keyboard input
-2. ✅ Automatically appends Enter/Return after each scan
-3. ✅ Works at 115200 baud rate
-4. ✅ Supports alphanumeric and special characters
-5. ✅ Can be used with any application (POS, inventory, web forms)
-
-## Supported Barcode Formats
-
-The device sends plain text, supporting common barcode formats:
-- **UPC/EAN**: `012345678905`
-- **Code 39**: `*ABC123*`
-- **Code 128**: `ABC-123-xyz`
-- **QR Code Data**: `http://example.com`
-- **Custom formats**: Any alphanumeric string
+1. Enter a barcode in the input field
+2. Click **SCAN** or press Enter
+3. The barcode will be sent as keyboard input to the focused application
+4. View scan history with timing information
 
 ## Device Information
 
+The GUI displays:
+- **Device Name**: Virtual Keyboard 115200
+- **Event Path**: `/dev/input/eventX` (auto-detected)
+- **Baudrate**: 115200 bps
+- **Vendor ID**: 0x1234
+- **Product ID**: 0x5678
+- **Status**: Running / Scanning indicator
+- **Recent Scans**: Last 10 scans with duration
+
+## Permissions
+
+### Option 1: Run with sudo (Quick)
+
 ```bash
-# Check device details
-cat /proc/bus/input/devices | grep -A 10 "Virtual Keyboard 115200"
-
-# Monitor events
-sudo evtest /dev/input/event25
-
-# Check permissions
-ls -l /dev/input/event25
+sudo ./target/release/virtusdev
 ```
+
+### Option 2: Add user to input group (Permanent)
+
+```bash
+# Add your user to the input group
+sudo usermod -a -G input $USER
+
+# Create udev rule
+echo 'KERNEL=="uinput", MODE="0660", GROUP="input"' | sudo tee /etc/udev/rules.d/99-uinput.rules
+
+# Reload udev rules
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+
+# Log out and back in for group changes to take effect
+```
+
+## How It Works
+
+1. Creates a virtual input device via Linux `uinput` kernel module
+2. Registers as a USB HID keyboard (`/dev/input/eventX`)
+3. Sends keyboard events for each character in the barcode
+4. Automatically appends Enter key after each scan
+5. Timing matches 115200 baud rate behavior
+
+## Architecture
+
+```
+src/
+├── main.rs       # GUI application (iced)
+├── device.rs     # VirtualKeyboard, keymap, event emission
+└── theme.rs      # Dark theme with glassmorphism
+```
+
+**Key Components:**
+- `VirtualKeyboard`: Wraps `evdev::uinput::VirtualDevice`
+- `Arc<Mutex<>>`: Thread-safe device access for async scans
+- `Task::perform()`: Non-blocking scan execution
+
+## Supported Characters
+
+- **Alphanumeric**: a-z, A-Z, 0-9
+- **Special**: space, enter, tab, `-_=+[]{};:'"<>,./?|\`~`
+- **Automatic shift**: Uppercase and shifted symbols
+
+## Testing
+
+### Test without GUI (Text Input)
+
+```bash
+# Terminal 1: Start a text editor
+nano test.txt
+
+# Terminal 2: Run virtusdev and enter barcodes in the GUI
+sudo ./target/release/virtusdev
+```
+
+### Monitor Device Events
+
+```bash
+# Find the event device
+cat /proc/bus/input/devices | grep -A 5 "Virtual Keyboard 115200"
+
+# Monitor events (requires sudo)
+sudo evtest /dev/input/eventX
+```
+
+## Legacy C Version
+
+The original C implementation is preserved in `legacy/` directory for reference.
 
 ## Troubleshooting
 
-### Device not found
-```bash
-# Make sure virtual_keyboard is running
-ps aux | grep virtual_keyboard
+### "Permission denied: /dev/uinput"
+Run with `sudo` or follow the permanent permissions setup above.
 
-# Load uinput module
+### Device not appearing
+```bash
+# Check if uinput module is loaded
+lsmod | grep uinput
+
+# Load if missing
 sudo modprobe uinput
 ```
 
-### Permission denied
+### Build errors
+Ensure all system dependencies are installed:
 ```bash
-# Run with sudo
-sudo ./keyboard_writer /dev/input/event25
-
-# Or add yourself to input group
-sudo usermod -a -G input $USER
+sudo apt-get install -y pkg-config libfontconfig-dev build-essential
 ```
 
-### Wrong device number
-```bash
-# Device number changes after reboot, always check:
-cat /proc/bus/input/devices | grep -A 5 "Virtual Keyboard 115200" | grep event
-```
+## Created By
+
+**jvwaldrich0**
+
+---
 
 ## Technical Specifications
 
 - **Baudrate**: 115200 bps
 - **Interface**: USB HID (emulated via uinput)
 - **Character timing**: ~87 μs per character
-- **Scan speed**: ~11,500 characters/second theoretical max
 - **Protocol**: Keyboard wedge (HID keyboard)
+- **GUI Framework**: iced 0.13
+- **Language**: Rust (edition 2021)
