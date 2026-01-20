@@ -130,8 +130,9 @@ fn get_keycode(c: char) -> Option<Key> {
             let offset = (c as u8) - b'A';
             Some(Key::new(Key::KEY_A.code() + offset as u16))
         }
-        '0'..='9' => {
-            let offset = (c as u8) - b'0';
+        '0' => Some(Key::KEY_0),
+        '1'..='9' => {
+            let offset = (c as u8) - b'1';
             Some(Key::new(Key::KEY_1.code() + offset as u16))
         }
         ' ' => Some(Key::KEY_SPACE),
