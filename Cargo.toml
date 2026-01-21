@@ -4,8 +4,23 @@ version = "2.0.0"
 edition = "2021"
 authors = ["jvwaldrich0"]
 
+[lib]
+name = "virtusdev"
+path = "src/lib.rs"
+
+[[bin]]
+name = "virtusdev"
+path = "src/main.rs"
+
+[[bin]]
+name = "bill_emulator"
+path = "src/bin/bill_emulator.rs"
+
 [dependencies]
 evdev = "0.12"
 gtk4 = "0.9"
 glib = "0.20"
 anyhow = "1.0"
+nix = { version = "0.27", features = ["term"] }
+crc = "3.0"
+libc = "0.2"
