@@ -1,11 +1,12 @@
-# VirtusDev - Virtual Barcode Scanner (Rust Edition)
+# VirtusDev - Virtual Input Device Emulator (Rust Edition)
 
-A virtual barcode scanner with modern GUI that emulates a USB barcode reader as a HID keyboard device on Linux.
+A comprehensive virtual input device emulator with modern GUI that emulates USB devices including barcode scanners, bill validators, and coin acceptors as HID keyboard devices on Linux.
 
 ## Features
 
 - 🎨 **Native GNOME interface** using GTK4
 - ⚡ **115200 baud** barcode scanner emulation
+- 💰 **Bill and coin emulator** with serial bridge support
 - 📊 **Real-time scan history** with duration tracking
 - 🖥️ **Native GUI** with system theme support
 - 🔒 **Safe Rust** implementation with proper error handling
@@ -81,18 +82,86 @@ sudo udevadm trigger
 4. Automatically appends Enter key after each scan
 5. Timing matches 115200 baud rate behavior
 
+## Bill & Coin Emulator
+
+The emulator provides comprehensive support for vending machine and payment system testing through the eSSP (Encrypted Serial Protocol):
+
+### Features
+
+**Note Validator (NV200)**
+- Simulates an ICT NV200 bill validator
+- Supports BRL currency (Brazilian Real)
+- 7 denominations: R$2, R$5, R$10, R$20, R$50, R$100, R$200
+- Protocol 6 eSSP compliance
+- Configurable balances for testing
+
+**Coin Acceptor (Smart Hopper)**
+- Simulates coin acceptance and payout
+- USD currency support
+- 6 denominations: 1¢, 5¢, 10¢, 25¢, 50¢, $1.00
+- Full payout simulation with event tracking
+
+**Serial Bridge (PTY)**
+- Virtual serial port (PTY) for device communication
+- Auto-creates `/dev/pts/X` for payment system integration
+- Transparent eSSP protocol handling
+- Real-time transaction logging
+
+### Usage
+
+```bash
+# Run the bill emulator with serial bridge
+./target/release/bill_emulator
+
+# The emulator will display:
+# ✓ Virtual serial port created: /dev/pts/X
+# Configure payment system to use: /dev/pts/X
+```
+
+### Supported eSSP Commands
+
+- `SYNC` - Device synchronization
+- `SETUP_REQUEST` - Device information query
+- `POLL` - Event polling and status
+- `ENABLE` / `DISABLE` - Device control
+- `SET_INHIBITS` - Denomination masking
+- `GET_ALL_LEVELS` - Current inventory
+- `PAYOUT` - Coin dispensing simulation
+- `REJECT` - Note rejection
+- `SET_ROUTE` - Stacking/routing control
+
+### Event Codes
+
+- `RESET` (0xF1) - Device reset
+- `READ` (0xEF) - Note detected
+- `CREDIT` (0xEE) - Note accepted
+- `STACKING` (0xCC) - Note being stacked
+- `STACKED` (0xEB) - Note stacked
+- `DISPENSING` (0xDA) - Coin dispensing
+- `DISPENSED` (0xD2) - Coin dispensed
+- `COINS_VALUE_ADDED` (0xBF) - Coin credit received
+
 ## Architecture
 
 ```
 src/
-├── main.rs       # GUI application (GTK4)
-└── device.rs     # VirtualKeyboard, keymap, event emission
+├── main.rs             # GUI application (GTK4)
+├── device.rs           # VirtualKeyboard, keymap, event emission
+├── bill_emulator.rs    # Device state & eSSP command handling
+├── essp_protocol.rs    # eSSP packet encoding/decoding with CRC-16
+├── serial_bridge.rs    # PTY serial port & device communication
+└── bin/
+    ├── bill_emulator   # Standalone bill/coin emulator
+    └── crc_check       # CRC validation utility
 ```
 
 **Key Components:**
 - `VirtualKeyboard`: Wraps `evdev::uinput::VirtualDevice`
 - `Arc<Mutex<>>`: Thread-safe device access for async scans
 - `glib::spawn_future`: Non-blocking scan execution with GTK4
+- `DeviceState`: Bill validator and coin device emulation
+- `EsspPacket`: Protocol-compliant packet serialization with CRC-16
+- `SerialBridge`: PTY-based serial communication
 
 ## Supported Characters
 
@@ -102,7 +171,7 @@ src/
 
 ## Testing
 
-### Test without GUI (Text Input)
+### Barcode Scanner (GUI)
 
 ```bash
 # Terminal 1: Start a text editor
@@ -112,7 +181,7 @@ nano test.txt
 sudo ./target/release/virtusdev
 ```
 
-### Monitor Device Events
+### Monitor Keyboard Events
 
 ```bash
 # Find the event device
@@ -120,6 +189,28 @@ cat /proc/bus/input/devices | grep -A 5 "Virtual Keyboard 115200"
 
 # Monitor events (requires sudo)
 sudo evtest /dev/input/eventX
+```
+
+### Bill & Coin Emulator Testing
+
+```bash
+# Terminal 1: Start the emulator
+./target/release/bill_emulator
+
+# Terminal 2: Connect using a payment system or test client
+# Using socat for testing:
+socat - /dev/pts/X
+
+# Send raw eSSP commands and monitor responses
+# Check /tmp/emu_cmd.log for transaction logs
+tail -f /tmp/emu_cmd.log
+```
+
+### Protocol Validation
+
+```bash
+# Verify CRC calculations
+./target/release/crc_check
 ```
 
 ## Legacy C Version
